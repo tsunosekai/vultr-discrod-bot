@@ -1,0 +1,15 @@
+[Unit]
+Description=Vultr Discord Bot
+After=network.target
+
+[Service]
+Type=simple
+User=tsuno
+WorkingDirectory=/home/tsuno/vultr-discrod-bot
+ExecStart=/home/tsuno/.nvm/versions/node/v18.17.1/bin/node /home/tsuno/vultr-discrod-bot/dist/index.js
+Restart=on-failure
+RestartSec=10
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target

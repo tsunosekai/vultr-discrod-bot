@@ -34,8 +34,16 @@ export function getServerNames(): string[] {
 }
 
 export const env = {
-  discordToken: process.env.DISCORD_TOKEN!,
-  discordGuildId: process.env.DISCORD_GUILD_ID!,
-  vultrApiKey: process.env.VULTR_API_KEY!,
-  snapshotRetention: parseInt(process.env.SNAPSHOT_RETENTION || "3", 10),
+  get discordToken() {
+    return process.env.DISCORD_TOKEN!;
+  },
+  get discordGuildId() {
+    return process.env.DISCORD_GUILD_ID!;
+  },
+  get vultrApiKey() {
+    return process.env.VULTR_API_KEY!;
+  },
+  get snapshotRetention() {
+    return parseInt(process.env.SNAPSHOT_RETENTION || "3", 10);
+  },
 };
