@@ -92,6 +92,26 @@ npm run build
 npm start
 ```
 
+### 10. デーモン化（オプション）
+
+systemd でサービスとして常駐させる場合:
+
+```bash
+# サービスファイルをコピー
+sudo cp vultr-discord-bot.service /etc/systemd/system/
+
+# サービスファイル内のパスを環境に合わせて編集
+sudo nano /etc/systemd/system/vultr-discord-bot.service
+
+# 有効化と起動
+sudo systemctl daemon-reload
+sudo systemctl enable vultr-discord-bot
+sudo systemctl start vultr-discord-bot
+
+# ログ確認
+journalctl -u vultr-discord-bot -f
+```
+
 ## リージョン ID 一覧
 
 | ID | 場所 |
