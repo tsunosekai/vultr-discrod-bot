@@ -52,4 +52,10 @@ export const env = {
   get allowedRoleName() {
     return process.env.ALLOWED_ROLE_NAME || "";
   },
+  get reminderTime() {
+    return process.env.REMINDER_TIME || "";
+  },
+  get reminderChannelId() {
+    return process.env.REMINDER_CHANNEL_ID || "";
+  },
 };

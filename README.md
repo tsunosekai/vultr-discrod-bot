@@ -139,6 +139,19 @@ journalctl -u vultr-discord-bot -f
 
 詳細は [Vultr API](https://www.vultr.com/api/#operation/list-plans) を参照。
 
+## リマインダー機能
+
+サーバーの消し忘れ防止のため、指定時刻にサーバーが稼働中であれば通知します。
+
+`.env` に以下を設定:
+```
+REMINDER_TIME=12:00
+REMINDER_CHANNEL_ID=チャンネルID
+```
+
+- `REMINDER_TIME`: 通知時刻（HH:MM形式）
+- `REMINDER_CHANNEL_ID`: 通知先チャンネルID（空欄で無効）
+
 ## 注意事項
 
 - スナップショット作成には数分かかります

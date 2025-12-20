@@ -8,6 +8,7 @@ import {
 } from "discord.js";
 import { env } from "../config.js";
 import * as serverCommand from "./commands/server.js";
+import { startReminder } from "../reminder.js";
 
 interface Command {
   data: { name: string };
@@ -25,6 +26,7 @@ export function createBot(): Client {
 
   client.once(Events.ClientReady, (readyClient) => {
     console.log(`Logged in as ${readyClient.user.tag}`);
+    startReminder(client);
   });
 
   client.on(Events.InteractionCreate, async (interaction) => {
