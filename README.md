@@ -80,9 +80,11 @@ ALLOWED_ROLE_NAME=Server Manager         # このロールを持つユーザー�
 - `snapshotPrefix`: スナップショット名の接頭辞
 - `allowedGuilds`: 操作を許可する Discord サーバーの ID 配列（空配列で全サーバー許可）
 
-### 7. 初回起動用スナップショットの作成
+### 7. 初回スナップショットについて
 
-最初に手動で Vultr でサーバーを作成し、サーバーをセットアップ後、スナップショットを作成してください。スナップショット名は `snapshotPrefix` で始まる名前にしてください（例: `minecraft-initial`）。
+サーバーが既に起動中の場合は、`/server stop` コマンドで自動的にスナップショットが作成されるため、手動での作成は不要です。
+
+スナップショットがない状態で `/server start` を使いたい場合のみ、Vultr コンソールから手動でスナップショットを作成してください。スナップショット名は `snapshotPrefix` で始まる名前にしてください（例: `minecraft-initial`）。
 
 ### 8. コマンド登録
 
