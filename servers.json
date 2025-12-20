@@ -1,0 +1,11 @@
+{
+  "servers": {
+    "satisfactory": {
+      "label": "denx-satisfactory",
+      "region": "nrt",
+      "plan": "vc2-4c-8gb",
+      "snapshotPrefix": "satisfactory-",
+      "description": "Satisfactory Dedicated Server"
+    }
+  }
+}
