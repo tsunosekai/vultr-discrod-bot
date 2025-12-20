@@ -34,6 +34,7 @@ Discord からゲームサーバーを起動/停止できるボット。スナ�
 ```bash
 npm install
 cp .env.example .env
+cp servers.example.json servers.json
 ```
 
 ### 5. 環境変数の設定

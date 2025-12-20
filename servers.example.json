@@ -1,0 +1,11 @@
+{
+  "servers": {
+    "minecraft": {
+      "label": "Minecraft Server",
+      "region": "nrt",
+      "plan": "vc2-2c-4gb",
+      "snapshotPrefix": "minecraft-",
+      "description": "Minecraft サーバー"
+    }
+  }
+}
