@@ -37,13 +37,19 @@ export const env = {
   get discordToken() {
     return process.env.DISCORD_TOKEN!;
   },
+  get discordClientId() {
+    return process.env.DISCORD_CLIENT_ID!;
+  },
   get discordGuildId() {
-    return process.env.DISCORD_GUILD_ID!;
+    return process.env.DISCORD_GUILD_ID || "";
   },
   get vultrApiKey() {
     return process.env.VULTR_API_KEY!;
   },
   get snapshotRetention() {
     return parseInt(process.env.SNAPSHOT_RETENTION || "3", 10);
+  },
+  get allowedRoleName() {
+    return process.env.ALLOWED_ROLE_NAME || "";
   },
 };

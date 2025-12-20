@@ -43,10 +43,16 @@ cp .env.example .env
 ```
 DISCORD_TOKEN=your_discord_bot_token
 DISCORD_CLIENT_ID=your_discord_client_id
-DISCORD_GUILD_ID=your_guild_id
+DISCORD_GUILD_ID=                        # 空欄でグローバルコマンド（全サーバー対応）
 VULTR_API_KEY=your_vultr_api_key
 SNAPSHOT_RETENTION=3
+ALLOWED_ROLE_NAME=Server Manager         # このロールを持つユーザーのみ操作可能
 ```
+
+| 変数 | 説明 |
+|------|------|
+| `DISCORD_GUILD_ID` | 特定サーバー専用にする場合はギルドID、空欄で全サーバー対応 |
+| `ALLOWED_ROLE_NAME` | コマンド実行に必要なロール名（空欄で制限なし） |
 
 ### 6. サーバー設定
 
@@ -137,3 +143,5 @@ journalctl -u vultr-discord-bot -f
 - スナップショット作成には数分かかります
 - サーバー起動後、IP 取得まで 1-2 分待機します
 - 古いスナップショットは自動的に削除されます（デフォルト: 最新 3 個保持）
+- グローバルコマンドの反映には最大1時間かかります
+- 複数の Discord サーバーで使用する場合は、各サーバーで `ALLOWED_ROLE_NAME` と同じ名前のロールを作成してください

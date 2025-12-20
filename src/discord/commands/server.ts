@@ -3,6 +3,7 @@ import {
   ChatInputCommandInteraction,
   EmbedBuilder,
   AutocompleteInteraction,
+  GuildMember,
 } from "discord.js";
 import {
   getServerConfig,
@@ -10,6 +11,18 @@ import {
   loadServersConfig,
   env,
 } from "../../config.js";
+
+function hasAllowedRole(interaction: ChatInputCommandInteraction): boolean {
+  const allowedRoleName = env.allowedRoleName;
+  if (!allowedRoleName) return true; // No role restriction
+
+  const member = interaction.member as GuildMember | null;
+  if (!member) return false;
+
+  return member.roles.cache.some(
+    (role) => role.name.toLowerCase() === allowedRoleName.toLowerCase()
+  );
+}
 import {
   findInstanceByLabel,
   findSnapshotsByPrefix,
@@ -81,6 +94,14 @@ export async function autocomplete(
 export async function execute(
   interaction: ChatInputCommandInteraction
 ): Promise<void> {
+  if (!hasAllowedRole(interaction)) {
+    await interaction.reply({
+      content: `You don't have permission to use this command. Required role: "${env.allowedRoleName}"`,
+      ephemeral: true,
+    });
+    return;
+  }
+
   const subcommand = interaction.options.getSubcommand();
 
   switch (subcommand) {
