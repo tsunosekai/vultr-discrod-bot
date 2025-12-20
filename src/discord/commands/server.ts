@@ -45,6 +45,7 @@ const planNames: Record<string, string> = {
   "vc2-4c-8gb": "4コア / 8GB",
   "vc2-6c-16gb": "6コア / 16GB",
   "vc2-8c-32gb": "8コア / 32GB",
+  "voc-g-2c-8gb-50s-amd": "2コア / 8GB (汎用)",
 };
 
 function formatRegion(region: string): string {
@@ -270,9 +271,18 @@ async function handleStop(
 
     await waitForSnapshotReady(snapshot.id);
 
+    // スナップショットが実際に存在するか確認
+    const snapshots = await findSnapshotsByPrefix(config.snapshotPrefix);
+    const createdSnapshot = snapshots.find((s) => s.id === snapshot.id);
+    if (!createdSnapshot || createdSnapshot.status !== "complete") {
+      await interaction.editReply(
+        `⚠️ スナップショットの作成を確認できませんでした。サーバーは削除されません。\n手動で確認してください。`
+      );
+      return;
+    }
+
     await interaction.editReply(`スナップショット完了。古いスナップショットを削除中...`);
 
-    const snapshots = await findSnapshotsByPrefix(config.snapshotPrefix);
     const snapshotsToDelete = snapshots.slice(env.snapshotRetention);
     for (const oldSnapshot of snapshotsToDelete) {
       await deleteSnapshot(oldSnapshot.id);
@@ -299,7 +309,7 @@ async function handleStop(
   } catch (error) {
     console.error("Error stopping server:", error);
     await interaction.editReply(
-      `サーバーの停止に失敗しました: ${error instanceof Error ? error.message : "不明なエラー"}`
+      `⚠️ サーバーの停止に失敗しました: ${error instanceof Error ? error.message : "不明なエラー"}\nサーバーは削除されていません。手動で確認してください。`
     );
   }
 }

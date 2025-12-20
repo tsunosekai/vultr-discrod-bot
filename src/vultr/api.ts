@@ -131,10 +131,15 @@ export async function findSnapshotsByPrefix(
   const snapshots = await listSnapshots();
   return snapshots
     .filter((s) => s.description.startsWith(prefix))
-    .sort(
-      (a, b) =>
-        new Date(b.date_created).getTime() - new Date(a.date_created).getTime()
-    );
+    .sort((a, b) => {
+      // まず作成日時で比較
+      const dateComparison =
+        new Date(b.date_created).getTime() - new Date(a.date_created).getTime();
+      if (dateComparison !== 0) return dateComparison;
+
+      // 作成日時が同じ場合、名前（description）で降順比較
+      return b.description.localeCompare(a.description);
+    });
 }
 
 export async function createSnapshot(
