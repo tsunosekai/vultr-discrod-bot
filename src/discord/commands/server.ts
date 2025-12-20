@@ -14,7 +14,7 @@ import {
 
 function hasAllowedRole(interaction: ChatInputCommandInteraction): boolean {
   const allowedRoleName = env.allowedRoleName;
-  if (!allowedRoleName) return true; // No role restriction
+  if (!allowedRoleName) return true;
 
   const member = interaction.member as GuildMember | null;
   if (!member) return false;
@@ -37,15 +37,15 @@ import {
 
 export const data = new SlashCommandBuilder()
   .setName("server")
-  .setDescription("Manage Vultr game servers")
+  .setDescription("Vultr ゲームサーバーを管理")
   .addSubcommand((subcommand) =>
     subcommand
       .setName("start")
-      .setDescription("Start a server from snapshot")
+      .setDescription("スナップショットからサーバーを起動")
       .addStringOption((option) =>
         option
           .setName("name")
-          .setDescription("Server name")
+          .setDescription("サーバー名")
           .setRequired(true)
           .setAutocomplete(true)
       )
@@ -53,11 +53,11 @@ export const data = new SlashCommandBuilder()
   .addSubcommand((subcommand) =>
     subcommand
       .setName("stop")
-      .setDescription("Stop a server and save snapshot")
+      .setDescription("サーバーを停止してスナップショットを保存")
       .addStringOption((option) =>
         option
           .setName("name")
-          .setDescription("Server name")
+          .setDescription("サーバー名")
           .setRequired(true)
           .setAutocomplete(true)
       )
@@ -65,17 +65,17 @@ export const data = new SlashCommandBuilder()
   .addSubcommand((subcommand) =>
     subcommand
       .setName("status")
-      .setDescription("Check server status")
+      .setDescription("サーバーの状態を確認")
       .addStringOption((option) =>
         option
           .setName("name")
-          .setDescription("Server name (optional, shows all if not specified)")
+          .setDescription("サーバー名（省略時は全サーバー表示）")
           .setRequired(false)
           .setAutocomplete(true)
       )
   )
   .addSubcommand((subcommand) =>
-    subcommand.setName("list").setDescription("List all configured servers")
+    subcommand.setName("list").setDescription("登録済みサーバー一覧を表示")
   );
 
 export async function autocomplete(
@@ -96,7 +96,7 @@ export async function execute(
 ): Promise<void> {
   if (!hasAllowedRole(interaction)) {
     await interaction.reply({
-      content: `You don't have permission to use this command. Required role: "${env.allowedRoleName}"`,
+      content: `このコマンドを使用する権限がありません。必要なロール: "${env.allowedRoleName}"`,
       ephemeral: true,
     });
     return;
@@ -128,7 +128,7 @@ async function handleStart(
 
   if (!config) {
     await interaction.reply({
-      content: `Server "${serverName}" is not configured.`,
+      content: `サーバー "${serverName}" は設定されていません。`,
       ephemeral: true,
     });
     return;
@@ -137,7 +137,7 @@ async function handleStart(
   const existingInstance = await findInstanceByLabel(config.label);
   if (existingInstance) {
     await interaction.reply({
-      content: `Server "${serverName}" is already running.\nIP: \`${existingInstance.main_ip}\``,
+      content: `サーバー "${serverName}" は既に起動中です。\nIP: \`${existingInstance.main_ip}\``,
       ephemeral: true,
     });
     return;
@@ -149,14 +149,14 @@ async function handleStart(
     const snapshots = await findSnapshotsByPrefix(config.snapshotPrefix);
     if (snapshots.length === 0) {
       await interaction.editReply(
-        `No snapshot found for "${serverName}" (prefix: ${config.snapshotPrefix})`
+        `"${serverName}" のスナップショットが見つかりません（プレフィックス: ${config.snapshotPrefix}）`
       );
       return;
     }
 
     const latestSnapshot = snapshots[0];
     await interaction.editReply(
-      `Starting "${serverName}" from snapshot: ${latestSnapshot.description}...`
+      `"${serverName}" を起動中... スナップショット: ${latestSnapshot.description}`
     );
 
     const instance = await createInstanceFromSnapshot(
@@ -167,18 +167,18 @@ async function handleStart(
     );
 
     await interaction.editReply(
-      `Instance created. Waiting for server to be ready...`
+      `インスタンスを作成しました。サーバーの準備完了を待機中...`
     );
 
     const readyInstance = await waitForInstanceReady(instance.id);
 
     const embed = new EmbedBuilder()
       .setColor(0x00ff00)
-      .setTitle(`${config.label} Started`)
+      .setTitle(`${config.label} 起動完了`)
       .addFields(
-        { name: "IP Address", value: `\`${readyInstance.main_ip}\``, inline: true },
-        { name: "Status", value: "Running", inline: true },
-        { name: "Region", value: config.region, inline: true }
+        { name: "IP アドレス", value: `\`${readyInstance.main_ip}\``, inline: true },
+        { name: "状態", value: "稼働中", inline: true },
+        { name: "リージョン", value: config.region, inline: true }
       )
       .setTimestamp();
 
@@ -186,7 +186,7 @@ async function handleStart(
   } catch (error) {
     console.error("Error starting server:", error);
     await interaction.editReply(
-      `Failed to start server: ${error instanceof Error ? error.message : "Unknown error"}`
+      `サーバーの起動に失敗しました: ${error instanceof Error ? error.message : "不明なエラー"}`
     );
   }
 }
@@ -199,7 +199,7 @@ async function handleStop(
 
   if (!config) {
     await interaction.reply({
-      content: `Server "${serverName}" is not configured.`,
+      content: `サーバー "${serverName}" は設定されていません。`,
       ephemeral: true,
     });
     return;
@@ -208,7 +208,7 @@ async function handleStop(
   const instance = await findInstanceByLabel(config.label);
   if (!instance) {
     await interaction.reply({
-      content: `Server "${serverName}" is not running.`,
+      content: `サーバー "${serverName}" は起動していません。`,
       ephemeral: true,
     });
     return;
@@ -224,16 +224,16 @@ async function handleStop(
       .slice(0, 15);
     const snapshotDescription = `${config.snapshotPrefix}${timestamp}`;
 
-    await interaction.editReply(`Creating snapshot: ${snapshotDescription}...`);
+    await interaction.editReply(`スナップショットを作成中: ${snapshotDescription}...`);
 
     const snapshot = await createSnapshot(instance.id, snapshotDescription);
     await interaction.editReply(
-      `Snapshot created. Waiting for completion (this may take several minutes)...`
+      `スナップショットを作成中... 完了まで数分かかる場合があります。`
     );
 
     await waitForSnapshotReady(snapshot.id);
 
-    await interaction.editReply(`Snapshot complete. Deleting old snapshots...`);
+    await interaction.editReply(`スナップショット完了。古いスナップショットを削除中...`);
 
     const snapshots = await findSnapshotsByPrefix(config.snapshotPrefix);
     const snapshotsToDelete = snapshots.slice(env.snapshotRetention);
@@ -241,18 +241,18 @@ async function handleStop(
       await deleteSnapshot(oldSnapshot.id);
     }
 
-    await interaction.editReply(`Deleting instance...`);
+    await interaction.editReply(`インスタンスを削除中...`);
     await deleteInstance(instance.id);
 
     const embed = new EmbedBuilder()
       .setColor(0xff9900)
-      .setTitle(`${config.label} Stopped`)
+      .setTitle(`${config.label} 停止完了`)
       .addFields(
-        { name: "Snapshot", value: snapshotDescription, inline: true },
-        { name: "Status", value: "Saved & Stopped", inline: true },
+        { name: "スナップショット", value: snapshotDescription, inline: true },
+        { name: "状態", value: "保存済み・停止", inline: true },
         {
-          name: "Old Snapshots Deleted",
-          value: `${snapshotsToDelete.length}`,
+          name: "削除した古いスナップショット",
+          value: `${snapshotsToDelete.length} 件`,
           inline: true,
         }
       )
@@ -262,7 +262,7 @@ async function handleStop(
   } catch (error) {
     console.error("Error stopping server:", error);
     await interaction.editReply(
-      `Failed to stop server: ${error instanceof Error ? error.message : "Unknown error"}`
+      `サーバーの停止に失敗しました: ${error instanceof Error ? error.message : "不明なエラー"}`
     );
   }
 }
@@ -278,7 +278,7 @@ async function handleStatus(
     if (serverName) {
       const config = getServerConfig(serverName);
       if (!config) {
-        await interaction.editReply(`Server "${serverName}" is not configured.`);
+        await interaction.editReply(`サーバー "${serverName}" は設定されていません。`);
         return;
       }
 
@@ -291,22 +291,22 @@ async function handleStatus(
         .setDescription(config.description)
         .addFields(
           {
-            name: "Status",
-            value: instance ? "Running" : "Stopped",
+            name: "状態",
+            value: instance ? "稼働中" : "停止中",
             inline: true,
           },
           {
-            name: "IP Address",
+            name: "IP アドレス",
             value: instance ? `\`${instance.main_ip}\`` : "-",
             inline: true,
           },
-          { name: "Snapshots", value: `${snapshots.length}`, inline: true }
+          { name: "スナップショット数", value: `${snapshots.length}`, inline: true }
         )
         .setTimestamp();
 
       if (snapshots.length > 0) {
         embed.addFields({
-          name: "Latest Snapshot",
+          name: "最新のスナップショット",
           value: snapshots[0].description,
           inline: false,
         });
@@ -320,7 +320,7 @@ async function handleStatus(
 
       const embed = new EmbedBuilder()
         .setColor(0x0099ff)
-        .setTitle("Server Status")
+        .setTitle("サーバー状態")
         .setTimestamp();
 
       for (const name of serverNames) {
@@ -330,8 +330,8 @@ async function handleStatus(
         embed.addFields({
           name: `${serverConfig.label}`,
           value: instance
-            ? `Running - \`${instance.main_ip}\``
-            : "Stopped",
+            ? `稼働中 - \`${instance.main_ip}\``
+            : "停止中",
           inline: false,
         });
       }
@@ -341,7 +341,7 @@ async function handleStatus(
   } catch (error) {
     console.error("Error getting status:", error);
     await interaction.editReply(
-      `Failed to get status: ${error instanceof Error ? error.message : "Unknown error"}`
+      `状態の取得に失敗しました: ${error instanceof Error ? error.message : "不明なエラー"}`
     );
   }
 }
@@ -354,14 +354,14 @@ async function handleList(
 
   const embed = new EmbedBuilder()
     .setColor(0x0099ff)
-    .setTitle("Configured Servers")
-    .setDescription("Use `/server start <name>` to start a server")
+    .setTitle("登録済みサーバー")
+    .setDescription("`/server start <name>` でサーバーを起動できます")
     .setTimestamp();
 
   for (const [name, serverConfig] of serverEntries) {
     embed.addFields({
       name: `${name}`,
-      value: `${serverConfig.description}\nRegion: ${serverConfig.region} | Plan: ${serverConfig.plan}`,
+      value: `${serverConfig.description}\nリージョン: ${serverConfig.region} | プラン: ${serverConfig.plan}`,
       inline: false,
     });
   }

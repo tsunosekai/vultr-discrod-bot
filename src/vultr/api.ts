@@ -159,7 +159,7 @@ export async function deleteSnapshot(snapshotId: string): Promise<void> {
 
 export async function waitForInstanceReady(
   instanceId: string,
-  timeoutMs: number = 300000
+  timeoutMs: number = 1800000
 ): Promise<VultrInstance> {
   const startTime = Date.now();
   const pollInterval = 5000;
@@ -181,7 +181,7 @@ export async function waitForInstanceReady(
 
 export async function waitForSnapshotReady(
   snapshotId: string,
-  timeoutMs: number = 600000
+  timeoutMs: number = 1800000
 ): Promise<VultrSnapshot> {
   const startTime = Date.now();
   const pollInterval = 10000;
