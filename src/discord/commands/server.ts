@@ -23,6 +23,37 @@ function hasAllowedRole(interaction: ChatInputCommandInteraction): boolean {
     (role) => role.name.toLowerCase() === allowedRoleName.toLowerCase()
   );
 }
+
+const regionNames: Record<string, string> = {
+  nrt: "東京",
+  icn: "ソウル",
+  sgp: "シンガポール",
+  lax: "ロサンゼルス",
+  ord: "シカゴ",
+  ewr: "ニュージャージー",
+  ams: "アムステルダム",
+  lhr: "ロンドン",
+  fra: "フランクフルト",
+  syd: "シドニー",
+};
+
+const planNames: Record<string, string> = {
+  "vc2-1c-1gb": "1コア / 1GB",
+  "vc2-1c-2gb": "1コア / 2GB",
+  "vc2-2c-4gb": "2コア / 4GB",
+  "vc2-4c-8gb": "4コア / 8GB",
+  "vc2-6c-16gb": "6コア / 16GB",
+  "vc2-8c-32gb": "8コア / 32GB",
+};
+
+function formatRegion(region: string): string {
+  return regionNames[region] || region;
+}
+
+function formatPlan(plan: string): string {
+  return planNames[plan] || plan;
+}
+
 import {
   findInstanceByLabel,
   findSnapshotsByPrefix,
@@ -178,7 +209,7 @@ async function handleStart(
       .addFields(
         { name: "IP アドレス", value: `\`${readyInstance.main_ip}\``, inline: true },
         { name: "状態", value: "稼働中", inline: true },
-        { name: "リージョン", value: config.region, inline: true }
+        { name: "リージョン", value: formatRegion(config.region), inline: true }
       )
       .setTimestamp();
 
@@ -361,7 +392,7 @@ async function handleList(
   for (const [name, serverConfig] of serverEntries) {
     embed.addFields({
       name: `${name}`,
-      value: `${serverConfig.description}\nリージョン: ${serverConfig.region} | プラン: ${serverConfig.plan}`,
+      value: `${serverConfig.description}\nリージョン: ${formatRegion(serverConfig.region)} | プラン: ${formatPlan(serverConfig.plan)}`,
       inline: false,
     });
   }
