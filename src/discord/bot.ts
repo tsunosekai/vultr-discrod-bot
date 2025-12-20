@@ -42,7 +42,7 @@ export function createBot(): Client {
       } catch (error) {
         console.error(`Error executing ${interaction.commandName}:`, error);
         const reply = {
-          content: "An error occurred while executing this command.",
+          content: "コマンドの実行中にエラーが発生しました。",
           ephemeral: true,
         };
         if (interaction.replied || interaction.deferred) {

@@ -7,7 +7,6 @@ import {
 } from "discord.js";
 import {
   getServerConfig,
-  getServerNames,
   getServerNamesForGuild,
   isServerAllowedForGuild,
   loadServersConfig,
@@ -357,6 +356,11 @@ async function handleStatus(
       const instances = await listInstances();
       const serverNames = getServerNamesForGuild(guildId);
 
+      if (serverNames.length === 0) {
+        await interaction.editReply("利用可能なサーバーがありません。");
+        return;
+      }
+
       const embed = new EmbedBuilder()
         .setColor(0x0099ff)
         .setTitle("サーバー状態")
@@ -391,6 +395,14 @@ async function handleList(
   const guildId = interaction.guildId || "";
   const config = loadServersConfig();
   const allowedServerNames = getServerNamesForGuild(guildId);
+
+  if (allowedServerNames.length === 0) {
+    await interaction.reply({
+      content: "利用可能なサーバーがありません。",
+      ephemeral: true,
+    });
+    return;
+  }
 
   const embed = new EmbedBuilder()
     .setColor(0x0099ff)

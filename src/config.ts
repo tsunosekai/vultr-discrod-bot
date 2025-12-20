@@ -29,11 +29,6 @@ export function getServerConfig(name: string): ServerConfig | undefined {
   return config.servers[name];
 }
 
-export function getServerNames(): string[] {
-  const config = loadServersConfig();
-  return Object.keys(config.servers);
-}
-
 export function getServerNamesForGuild(guildId: string): string[] {
   const config = loadServersConfig();
   return Object.entries(config.servers)
