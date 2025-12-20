@@ -11,6 +11,7 @@ export interface ServerConfig {
   plan: string;
   snapshotPrefix: string;
   description: string;
+  allowedGuilds?: string[];
 }
 
 export interface ServersConfig {
@@ -31,6 +32,27 @@ export function getServerConfig(name: string): ServerConfig | undefined {
 export function getServerNames(): string[] {
   const config = loadServersConfig();
   return Object.keys(config.servers);
+}
+
+export function getServerNamesForGuild(guildId: string): string[] {
+  const config = loadServersConfig();
+  return Object.entries(config.servers)
+    .filter(([_, serverConfig]) => {
+      if (!serverConfig.allowedGuilds || serverConfig.allowedGuilds.length === 0) {
+        return true; // No restriction
+      }
+      return serverConfig.allowedGuilds.includes(guildId);
+    })
+    .map(([name]) => name);
+}
+
+export function isServerAllowedForGuild(serverName: string, guildId: string): boolean {
+  const config = getServerConfig(serverName);
+  if (!config) return false;
+  if (!config.allowedGuilds || config.allowedGuilds.length === 0) {
+    return true; // No restriction
+  }
+  return config.allowedGuilds.includes(guildId);
 }
 
 export const env = {

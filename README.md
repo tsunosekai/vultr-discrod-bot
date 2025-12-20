@@ -67,7 +67,8 @@ ALLOWED_ROLE_NAME=Server Manager         # このロールを持つユーザー�
       "region": "nrt",
       "plan": "vc2-2c-4gb",
       "snapshotPrefix": "minecraft-",
-      "description": "Minecraft Java Edition Server"
+      "description": "Minecraft Java Edition Server",
+      "allowedGuilds": ["123456789012345678"]
     }
   }
 }
@@ -77,6 +78,7 @@ ALLOWED_ROLE_NAME=Server Manager         # このロールを持つユーザー�
 - `region`: リージョン ID（nrt = 東京）
 - `plan`: プラン ID
 - `snapshotPrefix`: スナップショット名の接頭辞
+- `allowedGuilds`: 操作を許可する Discord サーバーの ID 配列（空配列で全サーバー許可）
 
 ### 7. 初回起動用スナップショットの作成
 

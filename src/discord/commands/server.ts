@@ -8,6 +8,8 @@ import {
 import {
   getServerConfig,
   getServerNames,
+  getServerNamesForGuild,
+  isServerAllowedForGuild,
   loadServersConfig,
   env,
 } from "../../config.js";
@@ -113,7 +115,8 @@ export async function autocomplete(
   interaction: AutocompleteInteraction
 ): Promise<void> {
   const focusedValue = interaction.options.getFocused();
-  const serverNames = getServerNames();
+  const guildId = interaction.guildId || "";
+  const serverNames = getServerNamesForGuild(guildId);
   const filtered = serverNames.filter((name) =>
     name.toLowerCase().includes(focusedValue.toLowerCase())
   );
@@ -155,9 +158,11 @@ async function handleStart(
   interaction: ChatInputCommandInteraction
 ): Promise<void> {
   const serverName = interaction.options.getString("name", true);
+  const guildId = interaction.guildId || "";
+
   const config = getServerConfig(serverName);
 
-  if (!config) {
+  if (!config || !isServerAllowedForGuild(serverName, guildId)) {
     await interaction.reply({
       content: `サーバー "${serverName}" は設定されていません。`,
       ephemeral: true,
@@ -226,9 +231,11 @@ async function handleStop(
   interaction: ChatInputCommandInteraction
 ): Promise<void> {
   const serverName = interaction.options.getString("name", true);
+  const guildId = interaction.guildId || "";
+
   const config = getServerConfig(serverName);
 
-  if (!config) {
+  if (!config || !isServerAllowedForGuild(serverName, guildId)) {
     await interaction.reply({
       content: `サーバー "${serverName}" は設定されていません。`,
       ephemeral: true,
@@ -302,13 +309,14 @@ async function handleStatus(
   interaction: ChatInputCommandInteraction
 ): Promise<void> {
   const serverName = interaction.options.getString("name");
+  const guildId = interaction.guildId || "";
 
   await interaction.deferReply();
 
   try {
     if (serverName) {
       const config = getServerConfig(serverName);
-      if (!config) {
+      if (!config || !isServerAllowedForGuild(serverName, guildId)) {
         await interaction.editReply(`サーバー "${serverName}" は設定されていません。`);
         return;
       }
@@ -347,7 +355,7 @@ async function handleStatus(
     } else {
       const config = loadServersConfig();
       const instances = await listInstances();
-      const serverNames = Object.keys(config.servers);
+      const serverNames = getServerNamesForGuild(guildId);
 
       const embed = new EmbedBuilder()
         .setColor(0x0099ff)
@@ -380,8 +388,9 @@ async function handleStatus(
 async function handleList(
   interaction: ChatInputCommandInteraction
 ): Promise<void> {
+  const guildId = interaction.guildId || "";
   const config = loadServersConfig();
-  const serverEntries = Object.entries(config.servers);
+  const allowedServerNames = getServerNamesForGuild(guildId);
 
   const embed = new EmbedBuilder()
     .setColor(0x0099ff)
@@ -389,7 +398,8 @@ async function handleList(
     .setDescription("`/server start <name>` でサーバーを起動できます")
     .setTimestamp();
 
-  for (const [name, serverConfig] of serverEntries) {
+  for (const name of allowedServerNames) {
+    const serverConfig = config.servers[name];
     embed.addFields({
       name: `${name}`,
       value: `${serverConfig.description}\nリージョン: ${formatRegion(serverConfig.region)} | プラン: ${formatPlan(serverConfig.plan)}`,
