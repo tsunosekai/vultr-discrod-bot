@@ -2,7 +2,11 @@ import { Client, TextChannel, EmbedBuilder } from "discord.js";
 import { env, loadServersConfig } from "./config.js";
 import { listInstances } from "./vultr/api.js";
 
+const REMINDER_COLOR = 0xffcc00;
+const CHECK_INTERVAL_MS = 60000;
+
 let lastCheckedDate = "";
+let intervalId: ReturnType<typeof setInterval> | null = null;
 
 export function startReminder(client: Client): void {
   const { reminderTime, reminderChannelId } = env;
@@ -14,10 +18,21 @@ export function startReminder(client: Client): void {
 
   console.log(`Reminder enabled: ${reminderTime} → channel ${reminderChannelId}`);
 
-  // Check every minute
-  setInterval(() => {
+  // 既存のインターバルをクリア
+  if (intervalId) {
+    clearInterval(intervalId);
+  }
+
+  intervalId = setInterval(() => {
     checkAndNotify(client);
-  }, 60000);
+  }, CHECK_INTERVAL_MS);
+}
+
+export function stopReminder(): void {
+  if (intervalId) {
+    clearInterval(intervalId);
+    intervalId = null;
+  }
 }
 
 async function checkAndNotify(client: Client): Promise<void> {
@@ -56,7 +71,7 @@ async function checkAndNotify(client: Client): Promise<void> {
     }
 
     const embed = new EmbedBuilder()
-      .setColor(0xffcc00)
+      .setColor(REMINDER_COLOR)
       .setTitle("⚠️ サーバー稼働中リマインダー")
       .setDescription("以下のサーバーが稼働中です。使用していない場合は停止してください。")
       .setTimestamp();

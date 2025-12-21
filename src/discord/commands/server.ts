@@ -21,7 +21,33 @@ import {
   cleanupOldFiles,
   listSavedFiles,
 } from "../../file-server.js";
+import {
+  findInstanceByLabel,
+  findSnapshotsByPrefix,
+  createInstanceFromSnapshot,
+  createSnapshot,
+  deleteInstance,
+  deleteSnapshot,
+  waitForInstanceReady,
+  waitForSnapshotReady,
+  listInstances,
+} from "../../vultr/api.js";
 
+// 定数
+const COLORS = {
+  SUCCESS: 0x00ff00,
+  WARNING: 0xff9900,
+  INFO: 0x0099ff,
+  INACTIVE: 0x999999,
+} as const;
+
+const MESSAGES = {
+  SERVER_NOT_FOUND: (name: string) => `サーバー "${name}" は設定されていません。`,
+  NO_PERMISSION: (role: string) => `このコマンドを使用する権限がありません。必要なロール: "${role}"`,
+  NO_SERVERS: "利用可能なサーバーがありません。",
+} as const;
+
+// ヘルパー関数
 function hasAllowedRole(interaction: ChatInputCommandInteraction): boolean {
   const allowedRoleName = env.allowedRoleName;
   if (!allowedRoleName) return true;
@@ -32,6 +58,17 @@ function hasAllowedRole(interaction: ChatInputCommandInteraction): boolean {
   return member.roles.cache.some(
     (role) => role.name.toLowerCase() === allowedRoleName.toLowerCase()
   );
+}
+
+function validateServerAccess(
+  serverName: string,
+  guildId: string
+): { config: ServerConfig } | { error: string } {
+  const config = getServerConfig(serverName);
+  if (!config || !isServerAllowedForGuild(serverName, guildId)) {
+    return { error: MESSAGES.SERVER_NOT_FOUND(serverName) };
+  }
+  return { config };
 }
 
 const regionNames: Record<string, string> = {
@@ -64,18 +101,6 @@ function formatRegion(region: string): string {
 function formatPlan(plan: string): string {
   return planNames[plan] || plan;
 }
-
-import {
-  findInstanceByLabel,
-  findSnapshotsByPrefix,
-  createInstanceFromSnapshot,
-  createSnapshot,
-  deleteInstance,
-  deleteSnapshot,
-  waitForInstanceReady,
-  waitForSnapshotReady,
-  listInstances,
-} from "../../vultr/api.js";
 
 export const data = new SlashCommandBuilder()
   .setName("server")
@@ -151,7 +176,7 @@ export async function execute(
 ): Promise<void> {
   if (!hasAllowedRole(interaction)) {
     await interaction.reply({
-      content: `このコマンドを使用する権限がありません。必要なロール: "${env.allowedRoleName}"`,
+      content: MESSAGES.NO_PERMISSION(env.allowedRoleName),
       ephemeral: true,
     });
     return;
@@ -184,15 +209,12 @@ async function handleStart(
   const serverName = interaction.options.getString("name", true);
   const guildId = interaction.guildId || "";
 
-  const config = getServerConfig(serverName);
-
-  if (!config || !isServerAllowedForGuild(serverName, guildId)) {
-    await interaction.reply({
-      content: `サーバー "${serverName}" は設定されていません。`,
-      ephemeral: true,
-    });
+  const validation = validateServerAccess(serverName, guildId);
+  if ("error" in validation) {
+    await interaction.reply({ content: validation.error, ephemeral: true });
     return;
   }
+  const { config } = validation;
 
   const existingInstance = await findInstanceByLabel(config.label);
   if (existingInstance) {
@@ -233,7 +255,7 @@ async function handleStart(
     const readyInstance = await waitForInstanceReady(instance.id);
 
     const embed = new EmbedBuilder()
-      .setColor(0x00ff00)
+      .setColor(COLORS.SUCCESS)
       .setTitle(`${config.label} 起動完了`)
       .addFields(
         { name: "IP アドレス", value: `\`${readyInstance.main_ip}\``, inline: true },
@@ -301,15 +323,12 @@ async function handleStop(
   const serverName = interaction.options.getString("name", true);
   const guildId = interaction.guildId || "";
 
-  const config = getServerConfig(serverName);
-
-  if (!config || !isServerAllowedForGuild(serverName, guildId)) {
-    await interaction.reply({
-      content: `サーバー "${serverName}" は設定されていません。`,
-      ephemeral: true,
-    });
+  const validation = validateServerAccess(serverName, guildId);
+  if ("error" in validation) {
+    await interaction.reply({ content: validation.error, ephemeral: true });
     return;
   }
+  const { config } = validation;
 
   const instance = await findInstanceByLabel(config.label);
   if (!instance) {
@@ -378,7 +397,7 @@ async function handleStop(
     await deleteInstance(instance.id);
 
     const embed = new EmbedBuilder()
-      .setColor(0xff9900)
+      .setColor(COLORS.WARNING)
       .setTitle(`${config.label} 停止完了`)
       .addFields(
         { name: "スナップショット", value: snapshotDescription, inline: true },
@@ -421,17 +440,18 @@ async function handleStatus(
 
   try {
     if (serverName) {
-      const config = getServerConfig(serverName);
-      if (!config || !isServerAllowedForGuild(serverName, guildId)) {
-        await interaction.editReply(`サーバー "${serverName}" は設定されていません。`);
+      const validation = validateServerAccess(serverName, guildId);
+      if ("error" in validation) {
+        await interaction.editReply(validation.error);
         return;
       }
+      const { config } = validation;
 
       const instance = await findInstanceByLabel(config.label);
       const snapshots = await findSnapshotsByPrefix(config.snapshotPrefix);
 
       const embed = new EmbedBuilder()
-        .setColor(instance ? 0x00ff00 : 0x999999)
+        .setColor(instance ? COLORS.SUCCESS : COLORS.INACTIVE)
         .setTitle(`${config.label}`)
         .setDescription(config.description)
         .addFields(
@@ -464,12 +484,12 @@ async function handleStatus(
       const serverNames = getServerNamesForGuild(guildId);
 
       if (serverNames.length === 0) {
-        await interaction.editReply("利用可能なサーバーがありません。");
+        await interaction.editReply(MESSAGES.NO_SERVERS);
         return;
       }
 
       const embed = new EmbedBuilder()
-        .setColor(0x0099ff)
+        .setColor(COLORS.INFO)
         .setTitle("サーバー状態")
         .setTimestamp();
 
@@ -505,14 +525,14 @@ async function handleList(
 
   if (allowedServerNames.length === 0) {
     await interaction.reply({
-      content: "利用可能なサーバーがありません。",
+      content: MESSAGES.NO_SERVERS,
       ephemeral: true,
     });
     return;
   }
 
   const embed = new EmbedBuilder()
-    .setColor(0x0099ff)
+    .setColor(COLORS.INFO)
     .setTitle("登録済みサーバー")
     .setDescription("`/server start <name>` でサーバーを起動できます")
     .setTimestamp();
@@ -535,15 +555,12 @@ async function handleFiles(
   const serverName = interaction.options.getString("name", true);
   const guildId = interaction.guildId || "";
 
-  const config = getServerConfig(serverName);
-
-  if (!config || !isServerAllowedForGuild(serverName, guildId)) {
-    await interaction.reply({
-      content: `サーバー "${serverName}" は設定されていません。`,
-      ephemeral: true,
-    });
+  const validation = validateServerAccess(serverName, guildId);
+  if ("error" in validation) {
+    await interaction.reply({ content: validation.error, ephemeral: true });
     return;
   }
+  const { config } = validation;
 
   const files = listSavedFiles(serverName);
 
@@ -563,7 +580,7 @@ async function handleFiles(
   }
 
   const embed = new EmbedBuilder()
-    .setColor(0x0099ff)
+    .setColor(COLORS.INFO)
     .setTitle(`${config.label} - 保存済みファイル`)
     .setTimestamp();
 

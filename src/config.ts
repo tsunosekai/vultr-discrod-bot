@@ -28,10 +28,22 @@ export interface ServersConfig {
   servers: Record<string, ServerConfig>;
 }
 
+// キャッシュされた設定
+let cachedConfig: ServersConfig | null = null;
+
 export function loadServersConfig(): ServersConfig {
+  if (cachedConfig) {
+    return cachedConfig;
+  }
   const configPath = join(__dirname, "..", "servers.json");
   const content = readFileSync(configPath, "utf-8");
-  return JSON.parse(content) as ServersConfig;
+  cachedConfig = JSON.parse(content) as ServersConfig;
+  return cachedConfig;
+}
+
+export function reloadServersConfig(): ServersConfig {
+  cachedConfig = null;
+  return loadServersConfig();
 }
 
 export function getServerConfig(name: string): ServerConfig | undefined {
