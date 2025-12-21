@@ -8,6 +8,7 @@ const __dirname = dirname(__filename);
 export interface DownloadableFile {
   path: string;
   description: string;
+  type?: "file" | "directory";
 }
 
 export interface ServerConfig {

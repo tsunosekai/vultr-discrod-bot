@@ -13,7 +13,7 @@ import {
   env,
   ServerConfig,
 } from "../../config.js";
-import { executeCommand, downloadFile } from "../../sftp/client.js";
+import { executeCommand, downloadFile, downloadDirectoryAsZip } from "../../sftp/client.js";
 import {
   generateDownloadFilename,
   getLocalFilePath,
@@ -269,10 +269,16 @@ async function downloadFilesFromServer(
 
   for (const [fileKey, fileConfig] of Object.entries(config.downloadableFiles)) {
     try {
-      const filename = generateDownloadFilename(serverName, fileKey, fileConfig.path);
+      const isDirectory = fileConfig.type === "directory";
+      const ext = isDirectory ? ".zip" : "";
+      const filename = generateDownloadFilename(serverName, fileKey, fileConfig.path + ext);
       const localPath = getLocalFilePath(filename);
 
-      await downloadFile(sshOptions, fileConfig.path, localPath);
+      if (isDirectory) {
+        await downloadDirectoryAsZip(sshOptions, fileConfig.path, localPath);
+      } else {
+        await downloadFile(sshOptions, fileConfig.path, localPath);
+      }
 
       downloadedFiles.push({
         name: fileKey,

@@ -5,9 +5,10 @@ Discord からサーバーを起動/停止できるボット。スナップシ�
 ## 機能
 
 - `/server start <name>` - スナップショットからサーバーを起動し、IP アドレスを通知
-- `/server stop <name>` - サーバーをスナップショット化して削除
+- `/server stop <name>` - サーバーをスナップショット化して削除（セーブデータの自動バックアップ対応）
 - `/server status [name]` - サーバーの状態を確認
 - `/server list` - 登録済みサーバー一覧を表示
+- `/server files <name>` - 保存済みバックアップファイル一覧を表示
 
 ## セットアップ
 
@@ -48,12 +49,24 @@ DISCORD_GUILD_ID=                        # 空欄でグローバルコマンド�
 VULTR_API_KEY=your_vultr_api_key
 SNAPSHOT_RETENTION=3
 ALLOWED_ROLE_NAME=Server Manager         # このロールを持つユーザーのみ操作可能
+
+# ファイルバックアップ機能（オプション）
+SSH_PRIVATE_KEY_PATH=/home/user/.ssh/id_rsa
+FILE_SERVER_PORT=8080
+FILE_SERVER_BASE_URL=https://example.com/files
+FILE_DOWNLOAD_DIR=/path/to/downloads
+FILE_RETENTION=3
 ```
 
 | 変数 | 説明 |
 |------|------|
 | `DISCORD_GUILD_ID` | 特定サーバー専用にする場合はギルドID、空欄で全サーバー対応 |
 | `ALLOWED_ROLE_NAME` | コマンド実行に必要なロール名（空欄で制限なし） |
+| `SSH_PRIVATE_KEY_PATH` | SSH 秘密鍵のパス（ファイルバックアップ機能用） |
+| `FILE_SERVER_PORT` | ファイル配信サーバーのポート |
+| `FILE_SERVER_BASE_URL` | ファイルダウンロード用の公開 URL |
+| `FILE_DOWNLOAD_DIR` | ダウンロードしたファイルの保存先 |
+| `FILE_RETENTION` | 保持するバックアップファイル数（デフォルト: 3） |
 
 ### 6. サーバー設定
 
@@ -68,17 +81,55 @@ ALLOWED_ROLE_NAME=Server Manager         # このロールを持つユーザー�
       "plan": "vc2-2c-4gb",
       "snapshotPrefix": "minecraft-",
       "description": "Minecraft Java Edition Server",
-      "allowedGuilds": ["123456789012345678"]
+      "allowedGuilds": ["123456789012345678"],
+      "sshUser": "root",
+      "stopCommand": "systemctl stop minecraft",
+      "startCommand": "systemctl start minecraft",
+      "downloadableFiles": {
+        "world": {
+          "path": "/opt/minecraft/world",
+          "description": "ワールドデータ",
+          "type": "directory"
+        }
+      }
     }
   }
 }
 ```
 
-- `label`: Vultr インスタンスのラベル（これで識別）
-- `region`: リージョン ID（nrt = 東京）
-- `plan`: プラン ID
-- `snapshotPrefix`: スナップショット名の接頭辞
-- `allowedGuilds`: 操作を許可する Discord サーバーの ID 配列（空配列で全サーバー許可）
+#### 基本設定
+
+| 項目 | 説明 |
+|------|------|
+| `label` | Vultr インスタンスのラベル（これで識別） |
+| `region` | リージョン ID（nrt = 東京） |
+| `plan` | プラン ID |
+| `snapshotPrefix` | スナップショット名の接頭辞 |
+| `allowedGuilds` | 操作を許可する Discord サーバーの ID 配列（空配列で全サーバー許可） |
+
+#### ファイルバックアップ設定（オプション）
+
+| 項目 | 説明 |
+|------|------|
+| `sshUser` | SSH 接続ユーザー名 |
+| `stopCommand` | ゲームサーバー停止コマンド |
+| `startCommand` | ゲームサーバー起動コマンド |
+| `downloadableFiles` | ダウンロードするファイル/ディレクトリの設定 |
+
+#### downloadableFiles の設定
+
+```json
+"downloadableFiles": {
+  "キー名": {
+    "path": "/path/to/file/or/directory",
+    "description": "説明",
+    "type": "file"  // または "directory"
+  }
+}
+```
+
+- `type: "file"` - 単一ファイルをダウンロード
+- `type: "directory"` - ディレクトリを zip 圧縮してダウンロード
 
 ### 7. 初回スナップショットについて
 
@@ -156,6 +207,46 @@ REMINDER_CHANNEL_ID=チャンネルID
 - `REMINDER_TIME`: 通知時刻（HH:MM形式）
 - `REMINDER_CHANNEL_ID`: 通知先チャンネルID（空欄で無効）
 
+## ファイルバックアップ機能
+
+`/server stop` 実行時に、ゲームサーバーのセーブデータを自動的にバックアップします。
+
+### 動作フロー
+
+1. ゲームサーバー停止（`stopCommand` 実行）
+2. 設定されたファイル/ディレクトリを SFTP でダウンロード
+3. ダウンロード URL を Discord に通知
+4. ゲームサーバー再起動（`startCommand` 実行）
+5. スナップショット作成 → インスタンス削除
+
+### nginx 設定例
+
+ダウンロードファイルを HTTPS で配信するための nginx 設定:
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name files.example.com;
+
+    ssl_certificate /path/to/cert.pem;
+    ssl_certificate_key /path/to/key.pem;
+
+    location /files/ {
+        proxy_pass http://localhost:8080/files/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+### 必要条件
+
+- Vultr サーバーに SSH 公開鍵が登録されていること
+- SSH 秘密鍵のパーミッションが `600` であること
+- Vultr サーバーに `zip` コマンドがインストールされていること（directory タイプの場合）
+
 ## 注意事項
 
 - スナップショット作成には数分かかります
@@ -163,3 +254,4 @@ REMINDER_CHANNEL_ID=チャンネルID
 - 古いスナップショットは自動的に削除されます（デフォルト: 最新 3 個保持）
 - グローバルコマンドの反映には最大1時間かかります
 - 複数の Discord サーバーで使用する場合は、各サーバーで `ALLOWED_ROLE_NAME` と同じ名前のロールを作成してください
+- SSH 秘密鍵のパーミッションは `chmod 600` で設定してください

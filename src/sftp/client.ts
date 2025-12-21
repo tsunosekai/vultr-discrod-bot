@@ -120,3 +120,23 @@ export async function downloadFile(
     });
   });
 }
+
+export async function downloadDirectoryAsZip(
+  options: SshConnectionOptions,
+  remotePath: string,
+  localPath: string
+): Promise<void> {
+  const timestamp = Date.now();
+  const tempZipPath = `/tmp/download_${timestamp}.zip`;
+
+  await executeCommand(
+    options,
+    `cd "${remotePath}" && zip -r "${tempZipPath}" .`
+  );
+
+  try {
+    await downloadFile(options, tempZipPath, localPath);
+  } finally {
+    await executeCommand(options, `rm -f "${tempZipPath}"`).catch(() => {});
+  }
+}
