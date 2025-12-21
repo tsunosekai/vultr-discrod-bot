@@ -14,26 +14,23 @@ Discord から Vultr VPS インスタンスを起動/停止できるボット。
 | **ボットホスト** | このボットが動作するマシン |
 
 ```mermaid
-graph TB
-    subgraph Discord
-        User[ユーザー]
+graph LR
+    subgraph DiscordServer["Discord サーバー"]
+        User["ユーザー"]
     end
 
-    subgraph BotHost[ボットホスト]
-        Bot[Discord Bot]
-        FileServer[ファイルサーバー]
-        Bot ~~~ FileServer
+    subgraph BotHost["ボットホスト"]
+        Bot["Discord Bot"]
     end
 
-    subgraph Vultr[Vultr インスタンス]
-        Service[サービス]
-        Data[データ]
+    subgraph VultrInstance["Vultr インスタンス"]
+        Service["サービス"]
     end
 
-    User <-->|コマンド/通知| Bot
-    Bot -->|Vultr API| Vultr
-    Bot -->|SSH/SFTP| Vultr
-    FileServer -.->|ダウンロード| User
+    User <-->|コマンド / 通知| Bot
+    Bot -->|Vultr API / SSH| VultrInstance
+
+
 ```
 
 ## 機能
