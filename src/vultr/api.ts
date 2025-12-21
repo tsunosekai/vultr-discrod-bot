@@ -102,6 +102,7 @@ export async function createInstanceFromSnapshot(
       plan,
       snapshot_id: snapshotId,
       label,
+      backups: "disabled",
     }),
   });
   return data.instance;
