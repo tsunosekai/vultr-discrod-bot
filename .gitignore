@@ -3,3 +3,4 @@ dist/
 .env
 servers.json
 *.log
+downloads/
