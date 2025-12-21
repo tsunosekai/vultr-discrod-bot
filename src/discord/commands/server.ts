@@ -396,30 +396,19 @@ async function handleStop(
     await interaction.editReply(`インスタンスを削除中...`);
     await deleteInstance(instance.id);
 
+    const downloadLinks = downloadedFiles.length > 0
+      ? downloadedFiles.map((f) => `**${f.description}**: ${f.url}`).join("\n")
+      : null;
+
     const embed = new EmbedBuilder()
       .setColor(COLORS.WARNING)
       .setTitle(`${config.label} 停止完了`)
+      .setDescription(downloadLinks)
       .addFields(
         { name: "スナップショット", value: snapshotDescription, inline: true },
-        { name: "状態", value: "保存済み・停止", inline: true },
-        {
-          name: "削除した古いスナップショット",
-          value: `${snapshotsToDelete.length} 件`,
-          inline: true,
-        }
+        { name: "状態", value: "保存済み・停止", inline: true }
       )
       .setTimestamp();
-
-    if (downloadedFiles.length > 0) {
-      const downloadLinks = downloadedFiles
-        .map((f) => `**${f.description}**: ${f.url}`)
-        .join("\n");
-      embed.addFields({
-        name: "ダウンロードファイル",
-        value: downloadLinks,
-        inline: false,
-      });
-    }
 
     await interaction.editReply({ content: null, embeds: [embed] });
   } catch (error) {
