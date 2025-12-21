@@ -5,6 +5,11 @@ import { dirname, join } from "path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+export interface DownloadableFile {
+  path: string;
+  description: string;
+}
+
 export interface ServerConfig {
   label: string;
   region: string;
@@ -12,6 +17,10 @@ export interface ServerConfig {
   snapshotPrefix: string;
   description: string;
   allowedGuilds?: string[];
+  sshUser?: string;
+  stopCommand?: string;
+  startCommand?: string;
+  downloadableFiles?: Record<string, DownloadableFile>;
 }
 
 export interface ServersConfig {
@@ -74,5 +83,20 @@ export const env = {
   },
   get reminderChannelId() {
     return process.env.REMINDER_CHANNEL_ID || "";
+  },
+  get sshPrivateKeyPath() {
+    return process.env.SSH_PRIVATE_KEY_PATH || "";
+  },
+  get fileServerPort() {
+    return parseInt(process.env.FILE_SERVER_PORT || "8080", 10);
+  },
+  get fileServerBaseUrl() {
+    return process.env.FILE_SERVER_BASE_URL || "";
+  },
+  get fileDownloadDir() {
+    return process.env.FILE_DOWNLOAD_DIR || "";
+  },
+  get fileRetention() {
+    return parseInt(process.env.FILE_RETENTION || "3", 10);
   },
 };

@@ -6,7 +6,16 @@
       "plan": "vc2-2c-4gb",
       "snapshotPrefix": "minecraft-",
       "description": "Minecraft サーバー",
-      "allowedGuilds": []
+      "allowedGuilds": [],
+      "sshUser": "root",
+      "stopCommand": "systemctl stop minecraft",
+      "startCommand": "systemctl start minecraft",
+      "downloadableFiles": {
+        "world": {
+          "path": "/opt/minecraft/world.tar.gz",
+          "description": "ワールドデータ"
+        }
+      }
     }
   }
 }

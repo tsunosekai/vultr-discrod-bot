@@ -11,7 +11,15 @@ import {
   isServerAllowedForGuild,
   loadServersConfig,
   env,
+  ServerConfig,
 } from "../../config.js";
+import { executeCommand, downloadFile } from "../../sftp/client.js";
+import {
+  generateDownloadFilename,
+  getLocalFilePath,
+  getFileUrl,
+  cleanupOldFiles,
+} from "../../file-server.js";
 
 function hasAllowedRole(interaction: ChatInputCommandInteraction): boolean {
   const allowedRoleName = env.allowedRoleName;
@@ -227,6 +235,44 @@ async function handleStart(
   }
 }
 
+async function downloadFilesFromServer(
+  serverName: string,
+  config: ServerConfig,
+  host: string
+): Promise<{ name: string; url: string; description: string }[]> {
+  const downloadedFiles: { name: string; url: string; description: string }[] = [];
+
+  if (!config.downloadableFiles || !config.sshUser) {
+    return downloadedFiles;
+  }
+
+  const sshOptions = {
+    host,
+    user: config.sshUser,
+  };
+
+  for (const [fileKey, fileConfig] of Object.entries(config.downloadableFiles)) {
+    try {
+      const filename = generateDownloadFilename(serverName, fileKey, fileConfig.path);
+      const localPath = getLocalFilePath(filename);
+
+      await downloadFile(sshOptions, fileConfig.path, localPath);
+
+      downloadedFiles.push({
+        name: fileKey,
+        url: getFileUrl(filename),
+        description: fileConfig.description,
+      });
+
+      cleanupOldFiles(serverName, fileKey);
+    } catch (error) {
+      console.error(`Failed to download ${fileKey}:`, error);
+    }
+  }
+
+  return downloadedFiles;
+}
+
 async function handleStop(
   interaction: ChatInputCommandInteraction
 ): Promise<void> {
@@ -254,7 +300,26 @@ async function handleStop(
 
   await interaction.deferReply();
 
+  let downloadedFiles: { name: string; url: string; description: string }[] = [];
+
   try {
+    const hasDownloadConfig = config.sshUser && config.downloadableFiles && Object.keys(config.downloadableFiles).length > 0;
+
+    if (hasDownloadConfig && config.stopCommand) {
+      await interaction.editReply(`ゲームサーバーを停止中...`);
+
+      const sshOptions = { host: instance.main_ip, user: config.sshUser! };
+      await executeCommand(sshOptions, config.stopCommand);
+
+      await interaction.editReply(`ファイルをダウンロード中...`);
+      downloadedFiles = await downloadFilesFromServer(serverName, config, instance.main_ip);
+
+      if (config.startCommand) {
+        await interaction.editReply(`ゲームサーバーを再起動中...`);
+        await executeCommand(sshOptions, config.startCommand);
+      }
+    }
+
     const timestamp = new Date()
       .toISOString()
       .replace(/[-:]/g, "")
@@ -271,7 +336,6 @@ async function handleStop(
 
     await waitForSnapshotReady(snapshot.id);
 
-    // スナップショットが実際に存在するか確認
     const snapshots = await findSnapshotsByPrefix(config.snapshotPrefix);
     const createdSnapshot = snapshots.find((s) => s.id === snapshot.id);
     if (!createdSnapshot || createdSnapshot.status !== "complete") {
@@ -304,6 +368,17 @@ async function handleStop(
         }
       )
       .setTimestamp();
+
+    if (downloadedFiles.length > 0) {
+      const downloadLinks = downloadedFiles
+        .map((f) => `**${f.description}**: ${f.url}`)
+        .join("\n");
+      embed.addFields({
+        name: "ダウンロードファイル",
+        value: downloadLinks,
+        inline: false,
+      });
+    }
 
     await interaction.editReply({ content: null, embeds: [embed] });
   } catch (error) {
