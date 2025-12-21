@@ -79,7 +79,7 @@ import {
 
 export const data = new SlashCommandBuilder()
   .setName("server")
-  .setDescription("Vultr ゲームサーバーを管理")
+  .setDescription("Vultr インスタンスを管理")
   .addSubcommand((subcommand) =>
     subcommand
       .setName("start")
@@ -328,7 +328,7 @@ async function handleStop(
     const hasDownloadConfig = config.sshUser && config.downloadableFiles && Object.keys(config.downloadableFiles).length > 0;
 
     if (hasDownloadConfig && config.stopCommand) {
-      await interaction.editReply(`ゲームサーバーを停止中...`);
+      await interaction.editReply(`サービスを停止中...`);
 
       const sshOptions = { host: instance.main_ip, user: config.sshUser! };
       await executeCommand(sshOptions, config.stopCommand);
@@ -337,7 +337,7 @@ async function handleStop(
       downloadedFiles = await downloadFilesFromServer(serverName, config, instance.main_ip);
 
       if (config.startCommand) {
-        await interaction.editReply(`ゲームサーバーを再起動中...`);
+        await interaction.editReply(`サービスを再起動中...`);
         await executeCommand(sshOptions, config.startCommand);
       }
     }
