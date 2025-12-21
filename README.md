@@ -1,13 +1,45 @@
 # Vultr Discord Bot
 
-Discord からサーバーを起動/停止できるボット。スナップショット機能を使って VPS のコストを節約できます。
+Discord から Vultr VPS インスタンスを起動/停止できるボット。スナップショット機能を使って VPS のコストを節約できます。
+
+## 用語
+
+このドキュメントでは以下の用語を使用します：
+
+| 用語 | 説明 |
+|------|------|
+| **Discord サーバー** | Discord のコミュニティ |
+| **Vultr インスタンス** | Vultr 上の VPS |
+| **サービス** | Vultr インスタンス内で動作するアプリケーション（Minecraft 等） |
+| **ボットホスト** | このボットが動作するマシン |
+
+```mermaid
+graph LR
+    subgraph "Discord"
+        A[ユーザー] -->|コマンド| B[Discord Bot]
+    end
+
+    subgraph "ボットホスト"
+        B -->|API| C[Vultr API]
+        B -->|SSH/SFTP| D[Vultr インスタンス]
+        E[ファイルサーバー]
+    end
+
+    subgraph "Vultr インスタンス"
+        D --> F[サービス]
+        D --> G[データ]
+    end
+
+    B -->|URL通知| A
+    E -->|ダウンロード| A
+```
 
 ## 機能
 
-- `/server start <name>` - スナップショットからサーバーを起動し、IP アドレスを通知
-- `/server stop <name>` - サーバーをスナップショット化して削除（セーブデータの自動バックアップ対応）
-- `/server status [name]` - サーバーの状態を確認
-- `/server list` - 登録済みサーバー一覧を表示
+- `/server start <name>` - スナップショットから Vultr インスタンスを起動し、IP アドレスを通知
+- `/server stop <name>` - Vultr インスタンスをスナップショット化して削除（データの自動バックアップ対応）
+- `/server status [name]` - Vultr インスタンスの状態を確認
+- `/server list` - 登録済みインスタンス一覧を表示
 - `/server files <name>` - 保存済みバックアップファイル一覧を表示
 
 ## セットアップ
@@ -23,7 +55,7 @@ Discord からサーバーを起動/停止できるボット。スナップシ�
 1. [Discord Developer Portal](https://discord.com/developers/applications) でアプリケーションを作成
 2. Bot を追加し、Token を取得
 3. OAuth2 > URL Generator で `bot` と `applications.commands` スコープを選択
-4. 生成された URL でボットをサーバーに招待
+4. 生成された URL でボットを Discord サーバーに招待
 
 ### 3. Vultr API Key の取得
 
@@ -45,7 +77,7 @@ cp servers.example.json servers.json
 ```
 DISCORD_TOKEN=your_discord_bot_token
 DISCORD_CLIENT_ID=your_discord_client_id
-DISCORD_GUILD_ID=                        # 空欄でグローバルコマンド（全サーバー対応）
+DISCORD_GUILD_ID=                        # 空欄でグローバルコマンド（全 Discord サーバー対応）
 VULTR_API_KEY=your_vultr_api_key
 SNAPSHOT_RETENTION=3
 ALLOWED_ROLE_NAME=Server Manager         # このロールを持つユーザーのみ操作可能
@@ -60,7 +92,7 @@ FILE_RETENTION=3
 
 | 変数 | 説明 |
 |------|------|
-| `DISCORD_GUILD_ID` | 特定サーバー専用にする場合はギルドID、空欄で全サーバー対応 |
+| `DISCORD_GUILD_ID` | 特定 Discord サーバー専用にする場合は ID を指定、空欄で全サーバー対応 |
 | `ALLOWED_ROLE_NAME` | コマンド実行に必要なロール名（空欄で制限なし） |
 | `SSH_PRIVATE_KEY_PATH` | SSH 秘密鍵のパス（ファイルバックアップ機能用） |
 | `FILE_SERVER_PORT` | ファイル配信サーバーのポート |
@@ -68,9 +100,9 @@ FILE_RETENTION=3
 | `FILE_DOWNLOAD_DIR` | ダウンロードしたファイルの保存先 |
 | `FILE_RETENTION` | 保持するバックアップファイル数（デフォルト: 3） |
 
-### 6. サーバー設定
+### 6. インスタンス設定
 
-`servers.json` を編集して管理するサーバーを定義:
+`servers.json` を編集して管理する Vultr インスタンスを定義:
 
 ```json
 {
@@ -112,8 +144,8 @@ FILE_RETENTION=3
 | 項目 | 説明 |
 |------|------|
 | `sshUser` | SSH 接続ユーザー名 |
-| `stopCommand` | ゲームサーバー停止コマンド |
-| `startCommand` | ゲームサーバー起動コマンド |
+| `stopCommand` | サービス停止コマンド |
+| `startCommand` | サービス起動コマンド |
 | `downloadableFiles` | ダウンロードするファイル/ディレクトリの設定 |
 
 #### downloadableFiles の設定
@@ -133,7 +165,7 @@ FILE_RETENTION=3
 
 ### 7. 初回スナップショットについて
 
-サーバーが既に起動中の場合は、`/server stop` コマンドで自動的にスナップショットが作成されるため、手動での作成は不要です。
+Vultr インスタンスが既に起動中の場合は、`/server stop` コマンドで自動的にスナップショットが作成されるため、手動での作成は不要です。
 
 スナップショットがない状態で `/server start` を使いたい場合のみ、Vultr コンソールから手動でスナップショットを作成してください。スナップショット名は `snapshotPrefix` で始まる名前にしてください（例: `minecraft-initial`）。
 
@@ -196,7 +228,7 @@ journalctl -u vultr-discord-bot -f
 
 ## リマインダー機能
 
-サーバーの消し忘れ防止のため、指定時刻にサーバーが稼働中であれば通知します。
+Vultr インスタンスの消し忘れ防止のため、指定時刻にインスタンスが稼働中であれば通知します。
 
 `.env` に以下を設定:
 ```
@@ -209,15 +241,15 @@ REMINDER_CHANNEL_ID=チャンネルID
 
 ## ファイルバックアップ機能
 
-`/server stop` 実行時に、ゲームサーバーのセーブデータを自動的にバックアップします。
+`/server stop` 実行時に、サービスのデータを自動的にバックアップします。
 
 ### 動作フロー
 
-1. ゲームサーバー停止（`stopCommand` 実行）
+1. サービス停止（`stopCommand` 実行）
 2. 設定されたファイル/ディレクトリを SFTP でダウンロード
 3. ダウンロード URL を Discord に通知
-4. ゲームサーバー再起動（`startCommand` 実行）
-5. スナップショット作成 → インスタンス削除
+4. サービス再起動（`startCommand` 実行）
+5. スナップショット作成 → Vultr インスタンス削除
 
 ### nginx 設定例
 
@@ -243,15 +275,15 @@ server {
 
 ### 必要条件
 
-- Vultr サーバーに SSH 公開鍵が登録されていること
+- Vultr インスタンスに SSH 公開鍵が登録されていること
 - SSH 秘密鍵のパーミッションが `600` であること
-- Vultr サーバーに `zip` コマンドがインストールされていること（directory タイプの場合）
+- Vultr インスタンスに `zip` コマンドがインストールされていること（directory タイプの場合）
 
 ## 注意事項
 
 - スナップショット作成には数分かかります
-- サーバー起動後、IP 取得まで 1-2 分待機します
+- Vultr インスタンス起動後、IP 取得まで 1-2 分待機します
 - 古いスナップショットは自動的に削除されます（デフォルト: 最新 3 個保持）
-- グローバルコマンドの反映には最大1時間かかります
+- グローバルコマンドの反映には最大 1 時間かかります
 - 複数の Discord サーバーで使用する場合は、各サーバーで `ALLOWED_ROLE_NAME` と同じ名前のロールを作成してください
 - SSH 秘密鍵のパーミッションは `chmod 600` で設定してください
