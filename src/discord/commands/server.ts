@@ -19,6 +19,7 @@ import {
   getLocalFilePath,
   getFileUrl,
   cleanupOldFiles,
+  listSavedFiles,
 } from "../../file-server.js";
 
 function hasAllowedRole(interaction: ChatInputCommandInteraction): boolean {
@@ -117,6 +118,18 @@ export const data = new SlashCommandBuilder()
   )
   .addSubcommand((subcommand) =>
     subcommand.setName("list").setDescription("登録済みサーバー一覧を表示")
+  )
+  .addSubcommand((subcommand) =>
+    subcommand
+      .setName("files")
+      .setDescription("保存済みファイル一覧を表示")
+      .addStringOption((option) =>
+        option
+          .setName("name")
+          .setDescription("サーバー名")
+          .setRequired(true)
+          .setAutocomplete(true)
+      )
   );
 
 export async function autocomplete(
@@ -158,6 +171,9 @@ export async function execute(
       break;
     case "list":
       await handleList(interaction);
+      break;
+    case "files":
+      await handleFiles(interaction);
       break;
   }
 }
@@ -500,6 +516,66 @@ async function handleList(
     embed.addFields({
       name: `${name}`,
       value: `${serverConfig.description}\nリージョン: ${formatRegion(serverConfig.region)} | プラン: ${formatPlan(serverConfig.plan)}`,
+      inline: false,
+    });
+  }
+
+  await interaction.reply({ embeds: [embed] });
+}
+
+async function handleFiles(
+  interaction: ChatInputCommandInteraction
+): Promise<void> {
+  const serverName = interaction.options.getString("name", true);
+  const guildId = interaction.guildId || "";
+
+  const config = getServerConfig(serverName);
+
+  if (!config || !isServerAllowedForGuild(serverName, guildId)) {
+    await interaction.reply({
+      content: `サーバー "${serverName}" は設定されていません。`,
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const files = listSavedFiles(serverName);
+
+  if (files.length === 0) {
+    await interaction.reply({
+      content: `"${serverName}" の保存済みファイルはありません。`,
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const filesByKey = new Map<string, typeof files>();
+  for (const file of files) {
+    const existing = filesByKey.get(file.fileKey) || [];
+    existing.push(file);
+    filesByKey.set(file.fileKey, existing);
+  }
+
+  const embed = new EmbedBuilder()
+    .setColor(0x0099ff)
+    .setTitle(`${config.label} - 保存済みファイル`)
+    .setTimestamp();
+
+  for (const [fileKey, keyFiles] of filesByKey) {
+    const fileConfig = config.downloadableFiles?.[fileKey];
+    const description = fileConfig?.description || fileKey;
+
+    const fileList = keyFiles
+      .slice(0, 5)
+      .map((f) => {
+        const date = f.timestamp.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
+        return `[${date}](${f.url})`;
+      })
+      .join("\n");
+
+    embed.addFields({
+      name: description,
+      value: fileList || "ファイルなし",
       inline: false,
     });
   }

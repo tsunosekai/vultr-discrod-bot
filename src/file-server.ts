@@ -77,3 +77,37 @@ export function cleanupOldFiles(serverName: string, fileKey: string): void {
     }
   }
 }
+
+export interface SavedFile {
+  fileKey: string;
+  filename: string;
+  url: string;
+  timestamp: Date;
+}
+
+export function listSavedFiles(serverName: string): SavedFile[] {
+  const { fileDownloadDir } = env;
+
+  if (!fileDownloadDir || !existsSync(fileDownloadDir)) {
+    return [];
+  }
+
+  const prefix = `${serverName}_`;
+  const files = readdirSync(fileDownloadDir)
+    .filter((f) => f.startsWith(prefix))
+    .map((f) => {
+      const path = join(fileDownloadDir, f);
+      const stat = statSync(path);
+      const parts = f.split("_");
+      const fileKey = parts[1] || "";
+      return {
+        fileKey,
+        filename: f,
+        url: getFileUrl(f),
+        timestamp: stat.mtime,
+      };
+    })
+    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+
+  return files;
+}
