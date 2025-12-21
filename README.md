@@ -22,6 +22,7 @@ graph TB
     subgraph BotHost[ボットホスト]
         Bot[Discord Bot]
         FileServer[ファイルサーバー]
+        Bot ~~~ FileServer
     end
 
     subgraph Vultr[Vultr インスタンス]
@@ -32,7 +33,7 @@ graph TB
     User <-->|コマンド/通知| Bot
     Bot -->|Vultr API| Vultr
     Bot -->|SSH/SFTP| Vultr
-    FileServer -->|ダウンロード| User
+    FileServer -.->|ダウンロード| User
 ```
 
 ## 機能
