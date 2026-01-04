@@ -375,25 +375,35 @@ async function handleStop(
       `スナップショットを作成中... 完了まで数分かかる場合があります。`
     );
 
+    // スナップショット完了待ちは時間がかかるため、以降はチャンネルに直接送信
+    // (Discordのインタラクショントークンは15分で期限切れになるため)
+    const channel = interaction.channel;
+    const canSend = channel && "send" in channel;
     await waitForSnapshotReady(snapshot.id);
 
     const snapshots = await findSnapshotsByPrefix(config.snapshotPrefix);
     const createdSnapshot = snapshots.find((s) => s.id === snapshot.id);
     if (!createdSnapshot || createdSnapshot.status !== "complete") {
-      await interaction.editReply(
-        `⚠️ スナップショットの作成を確認できませんでした。サーバーは削除されません。\n手動で確認してください。`
-      );
+      if (canSend) {
+        await channel.send(
+          `⚠️ スナップショットの作成を確認できませんでした。サーバーは削除されません。\n手動で確認してください。`
+        );
+      }
       return;
     }
 
-    await interaction.editReply(`スナップショット完了。古いスナップショットを削除中...`);
+    if (canSend) {
+      await channel.send(`スナップショット完了。古いスナップショットを削除中...`);
+    }
 
     const snapshotsToDelete = snapshots.slice(env.snapshotRetention);
     for (const oldSnapshot of snapshotsToDelete) {
       await deleteSnapshot(oldSnapshot.id);
     }
 
-    await interaction.editReply(`インスタンスを削除中...`);
+    if (canSend) {
+      await channel.send(`インスタンスを削除中...`);
+    }
     await deleteInstance(instance.id);
 
     const downloadLinks = downloadedFiles.length > 0
@@ -410,12 +420,18 @@ async function handleStop(
       )
       .setTimestamp();
 
-    await interaction.editReply({ content: null, embeds: [embed] });
+    if (canSend) {
+      await channel.send({ embeds: [embed] });
+    }
   } catch (error) {
     console.error("Error stopping server:", error);
-    await interaction.editReply(
-      `⚠️ サーバーの停止に失敗しました: ${error instanceof Error ? error.message : "不明なエラー"}\nサーバーは削除されていません。手動で確認してください。`
-    );
+    const channel = interaction.channel;
+    const canSend = channel && "send" in channel;
+    if (canSend) {
+      await channel.send(
+        `⚠️ サーバーの停止に失敗しました: ${error instanceof Error ? error.message : "不明なエラー"}\nサーバーは削除されていません。手動で確認してください。`
+      );
+    }
   }
 }
 
