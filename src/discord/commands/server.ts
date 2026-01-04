@@ -252,6 +252,11 @@ async function handleStart(
       `インスタンスを作成しました。サーバーの準備完了を待機中...`
     );
 
+    // インスタンス準備完了待ちは時間がかかるため、以降はチャンネルに直接送信
+    // (Discordのインタラクショントークンは15分で期限切れになるため)
+    const channel = interaction.channel;
+    const canSend = channel && "send" in channel;
+
     const readyInstance = await waitForInstanceReady(instance.id);
 
     const embed = new EmbedBuilder()
@@ -264,12 +269,18 @@ async function handleStart(
       )
       .setTimestamp();
 
-    await interaction.editReply({ content: null, embeds: [embed] });
+    if (canSend) {
+      await channel.send({ embeds: [embed] });
+    }
   } catch (error) {
     console.error("Error starting server:", error);
-    await interaction.editReply(
-      `サーバーの起動に失敗しました: ${error instanceof Error ? error.message : "不明なエラー"}`
-    );
+    const channel = interaction.channel;
+    const canSend = channel && "send" in channel;
+    if (canSend) {
+      await channel.send(
+        `サーバーの起動に失敗しました: ${error instanceof Error ? error.message : "不明なエラー"}`
+      );
+    }
   }
 }
 
